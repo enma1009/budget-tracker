@@ -74,7 +74,7 @@ function populateChart() {
         datasets: [{
             label: "Total Over Time",
             fill: true,
-            backgroundColor: "#6666ff",
+            backgroundColor: "#007bff",
             data
         }]
     }
@@ -191,7 +191,7 @@ function readDB() {
   const listOfItemsStored = transaction.objectStore("transactions");
   const allItems = listOfItemsStored.getAll();
 
-  allItems.onsuccess = () => {
+  allItems.onsuccess = () => { //Storing indexedDB data in mongodb when the app goes online
     if (allItems.result.length > 0) {
       fetch("/api/transaction", {
         method: "POST",
@@ -205,11 +205,11 @@ function readDB() {
       .then(() => {
         const transaction = db.transaction(["transactions"],"readwrite");
         const listOfItemsStored = transaction.objectStore("transactions");
-        listOfItemsStored.clear();
+        listOfItemsStored.clear(); // deleting data from indexedDB after it's stored in the server
       });
     }
   }
 
 }
 
-window.addEventListener("online", readDB);
+window.addEventListener("online", readDB); //this will check if there's data in indexedDB every time the app goes online
