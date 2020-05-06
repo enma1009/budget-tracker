@@ -157,34 +157,59 @@ document.querySelector("#sub-btn").onclick = function() {
 };
 
 // indexedDB stuff
+let db;
+const request = indexedDB.open('budget-tracker',2);
+
+request.onupgradeneeded = (e)=> {
+  const db = e.target.result;
+  let objectStore;
+  try {
+    objectStore = request.transaction.objectStore("transactions");
+  } catch(error) {
+    objectStore = db.createObjectStore("transactions",{autoIncrement:true});
+  }
+}
+
+request.onsuccess = (e) => {
+  db = event.target.result;
+  if (navigator.onLine) {
+    readDB();
+  }
+}
+
 function saveRecord(data) {
 
-  const request = indexedDB.open('budget-tracker',2);
-  request.onsuccess = (e)=> {
-    console.log("Database running");
-    const db = e.target.result;
-    const transaction = db.transaction(["transactions"],"readwrite");
-    const listOfItemsStored = transaction.objectStore("transactions");
-    
-    data.forEach((item)=>{
-      listOfItemsStored.add(item);
-    });
-    
-  }
+  const transaction = db.transaction(["transactions"],"readwrite");
+  const listOfItemsStored = transaction.objectStore("transactions");
+  listOfItemsStored.add(data);
 
-  request.onupgradeneeded = (e)=> {
-    const db = e.target.result;
-    let objectStore;
-    try {
-      objectStore = request.transaction.objectStore("transactions");
-    } catch(error) {
-      objectStore = db.createObjectStore("transactions",{autoIncrement:true});
-    }
-    try {
-      objectStore.createIndex("transactionName","name");
-    } catch(error) {
-      //?
+}
+
+function readDB() {
+
+  const transaction = db.transaction(["transactions"],"readwrite");
+  const listOfItemsStored = transaction.objectStore("transactions");
+  const allItems = listOfItemsStored.getAll();
+
+  allItems.onsuccess = () => {
+    if (allItems.result.length > 0) {
+      fetch("/api/transaction", {
+        method: "POST",
+        body: JSON.stringify(allItems.result),
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/json"
+        }
+      })
+      .then(response => response.json())
+      .then(() => {
+        const transaction = db.transaction(["transactions"],"readwrite");
+        const listOfItemsStored = transaction.objectStore("transactions");
+        listOfItemsStored.clear();
+      });
     }
   }
 
 }
+
+window.addEventListener("online", readDB);
